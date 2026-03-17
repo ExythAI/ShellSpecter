@@ -6,7 +6,7 @@
 <div class="dashboard-grid fade-in">
     @* Row 1: System Info + CPU (unchanged) *@
     <div class="panel panel-third">
-        <SystemInfoPanel Info="@_snapshot?.System" />
+        <SystemInfoPanel Info="@_snapshot?.System" Fans="@_snapshot?.Fans" />
     </div>
 
     <div class="panel panel-two-thirds">

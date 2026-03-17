@@ -66,6 +66,22 @@
                 </div>
             }
         }
+
+        @if (Fans != null && Fans.Length > 0)
+        {
+            <div class="stat-label mt-1 mb-1" style="padding-top: 0.5rem; border-top: 1px solid var(--border-subtle);">
+                🌀 Fan Speeds
+            </div>
+            @foreach (var fan in Fans)
+            {
+                <div class="sysinfo-row">
+                    <span class="sysinfo-label">@fan.Label</span>
+                    <span class="sysinfo-value @(fan.Rpm == 0 ? "text-dim" : "text-cyan")">
+                        @(fan.Rpm == 0 ? "Stopped" : $"{fan.Rpm:N0} RPM")
+                    </span>
+                </div>
+            }
+        }
     }
     else
     {
@@ -75,6 +91,7 @@
 
 @code {
     [Parameter] public SystemInfo? Info { get; set; }
+    [Parameter] public FanSnapshot[]? Fans { get; set; }
 
     private static string FormatRam(long mb)
     {

@@ -23,6 +23,7 @@ public sealed class TelemetryCollector : BackgroundService
     private readonly NetworkParser _networkParser = new();
     private readonly ProcessParser _processParser = new();
     private readonly SystemInfoParser _systemInfoParser = new();
+    private readonly FanParser _fanParser = new();
 
     public TelemetryCollector(
         TelemetryBroadcaster broadcaster,
@@ -83,6 +84,7 @@ public sealed class TelemetryCollector : BackgroundService
             Disks = disks,
             Networks = networks,
             Processes = processes,
+            Fans = _fanParser.Parse(),
             System = _systemInfoParser.Parse()
         };
     }

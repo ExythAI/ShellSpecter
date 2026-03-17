@@ -15,6 +15,7 @@ public sealed class SystemSnapshot
     public DiskSnapshot[] Disks { get; set; } = [];
     public NetworkSnapshot[] Networks { get; set; } = [];
     public ProcessSnapshot[] Processes { get; set; } = [];
+    public FanSnapshot[] Fans { get; set; } = [];
     public SystemInfo System { get; set; } = new();
 }
 
@@ -102,4 +103,10 @@ public sealed class ProcessSnapshot
     public double CpuPercent { get; set; }
     public long MemoryKb { get; set; }
     public int Nice { get; set; }
+}
+
+public sealed class FanSnapshot
+{
+    public string Label { get; set; } = "";
+    public int Rpm { get; set; }
 }
