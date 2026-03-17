@@ -47,7 +47,7 @@ else
                 <div class="sidebar-label">Specter Endpoint</div>
                 <div class="connection-input-row" style="justify-content: center;">
                     <input class="connection-input" style="max-width: 260px;"
-                           @bind="_specterUrl" placeholder="http://localhost:5050" />
+                           @bind="_specterUrl" placeholder="Specter daemon URL" />
                 </div>
             </div>
         </div>
@@ -63,8 +63,15 @@ else
     protected override void OnInitialized()
     {
         // Default to the current page origin (works for remote access)
-        var uri = new Uri(Nav.BaseUri);
-        _specterUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        try
+        {
+            var uri = new Uri(Nav.Uri);
+            _specterUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        }
+        catch
+        {
+            _specterUrl = "http://localhost:5050";
+        }
     }
 
     private async Task HandleLogin()
