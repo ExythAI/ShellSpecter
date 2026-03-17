@@ -89,7 +89,24 @@ dotnet run --project src/ShellSpecter.Seer --urls "http://0.0.0.0:5051" &
 
 ### Linux (Production — Systemd Service)
 
+**One-liner deploy** (installs .NET SDK, builds, configures systemd, firewall, JWT secret):
+
 ```bash
+curl -sSL https://raw.githubusercontent.com/ExythAI/ShellSpecter/master/deploy.sh | sudo bash
+```
+
+Or clone first and run locally:
+
+```bash
+git clone https://github.com/ExythAI/ShellSpecter.git
+cd ShellSpecter
+sudo ./deploy.sh          # Full production install
+# or
+./deploy.sh --dev         # Dev mode (foreground, no systemd)
+```
+
+<details>
+<summary>Manual step-by-step (click to expand)</summary>
 # 1. Clone and build a self-contained release binary
 git clone https://github.com/ExythAI/ShellSpecter.git
 cd ShellSpecter
@@ -124,6 +141,8 @@ sudo journalctl -u shellspecter -f
 #    Open http://<server-ip>:5050 in your browser
 #    Login with your Linux system credentials
 ```
+
+</details>
 
 ### Linux (Native AOT — Minimal Binary)
 
