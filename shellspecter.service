@@ -1,11 +1,11 @@
 [Unit]
 Description=ShellSpecter System Observatory Daemon
-Documentation=https://github.com/shellspecter
+Documentation=https://github.com/ExythAI/ShellSpecter
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=notify
+Type=exec
 ExecStart=/opt/shellspecter/ShellSpecter.Specter
 WorkingDirectory=/opt/shellspecter
 User=specter
@@ -16,7 +16,7 @@ LimitNOFILE=65536
 
 # Security hardening
 ProtectHome=yes
-ProtectSystem=strict
+ProtectSystem=full
 ReadOnlyPaths=/proc /sys
 NoNewPrivileges=true
 PrivateTmp=true
