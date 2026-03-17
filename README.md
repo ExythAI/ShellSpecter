@@ -59,23 +59,83 @@ dotnet run --project src/ShellSpecter.Seer             # Terminal 2 — dashboar
 
 Then open the URL shown in Terminal 2 and login with **any username/password** (mock mode accepts all credentials).
 
-### Linux (Production)
+### Linux (Development — Live Data)
 
 ```bash
-# Build the daemon
-dotnet publish src/ShellSpecter.Specter -c Release -r linux-x64
+# 1. Install .NET 10 SDK (if not already installed)
+#    See https://dotnet.microsoft.com/download/dotnet/10.0
+#    For Ubuntu/Debian:
+wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+chmod +x dotnet-install.sh
+./dotnet-install.sh --channel 10.0
+export PATH="$HOME/.dotnet:$PATH"
 
-# Copy to target host
-scp -r src/ShellSpecter.Specter/bin/Release/net10.0/linux-x64/publish/ user@host:/opt/shellspecter/
+# 2. Clone the repo
+git clone https://github.com/ExythAI/ShellSpecter.git
+cd ShellSpecter
 
-# Install systemd service
-sudo cp shellspecter.service /etc/systemd/system/
+# 3. Start the Specter daemon (reads real /proc data on Linux)
+dotnet run --project src/ShellSpecter.Specter &
+
+# 4. Start the Seer dashboard
+dotnet run --project src/ShellSpecter.Seer --urls "http://0.0.0.0:5051" &
+
+# 5. Open in browser
+#    Navigate to http://<your-linux-ip>:5051
+#    Login with your Linux system username and password (PAM auth)
+```
+
+> **Note:** On Linux the daemon uses real PAM authentication — login with actual system user credentials.
+
+### Linux (Production — Systemd Service)
+
+```bash
+# 1. Clone and build a self-contained release binary
+git clone https://github.com/ExythAI/ShellSpecter.git
+cd ShellSpecter
+dotnet publish src/ShellSpecter.Specter -c Release -r linux-x64 --self-contained true -o /opt/shellspecter
+
+# 2. Build the Seer dashboard and copy to the daemon's wwwroot
+dotnet publish src/ShellSpecter.Seer -c Release -o /tmp/seer-publish
+cp -r /tmp/seer-publish/wwwroot /opt/shellspecter/wwwroot
+
+# 3. Create a service user
 sudo useradd -r -s /sbin/nologin specter
+
+# 4. Set ownership and permissions
+sudo chown -R specter:specter /opt/shellspecter
+sudo chmod +x /opt/shellspecter/ShellSpecter.Specter
+
+# 5. Update the JWT secret in production
+sudo nano /opt/shellspecter/appsettings.json
+# Change "Jwt:Secret" to a strong random string
+# Update "AllowedOrigins" to your dashboard URL if hosting separately
+
+# 6. Install the systemd service
+sudo cp shellspecter.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now shellspecter
 
-# Access the dashboard
-# Either serve the Seer WASM app from a web server, or use the daemon's SPA fallback
+# 7. Check status
+sudo systemctl status shellspecter
+sudo journalctl -u shellspecter -f
+
+# 8. Access the dashboard
+#    Open http://<server-ip>:5050 in your browser
+#    Login with your Linux system credentials
+```
+
+### Linux (Native AOT — Minimal Binary)
+
+```bash
+# Produces a single ~15MB binary with no .NET runtime dependency
+dotnet publish src/ShellSpecter.Specter \
+  -c Release \
+  -r linux-x64 \
+  --self-contained true \
+  -p:PublishAot=true \
+  -p:StripSymbols=true \
+  -o /opt/shellspecter
 ```
 
 ### Docker
