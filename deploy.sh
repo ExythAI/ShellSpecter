@@ -105,6 +105,22 @@ if [[ "$DEV_MODE" == true ]]; then
     exit 0
 fi
 
+# ── Step 4b: Install lm-sensors for hardware monitoring ───────
+if command -v apt &>/dev/null; then
+    apt install -y lm-sensors >/dev/null 2>&1 || true
+elif command -v dnf &>/dev/null; then
+    dnf install -y lm_sensors >/dev/null 2>&1 || true
+fi
+
+# Auto-detect and load sensor kernel modules
+if command -v sensors-detect &>/dev/null; then
+    yes "" | sensors-detect --auto >/dev/null 2>&1 || true
+fi
+# Load common sensor modules
+modprobe coretemp 2>/dev/null || true
+modprobe nct6775 2>/dev/null || true
+ok "Hardware sensors configured"
+
 # ── Step 5: Production install ────────────────────────────────
 if [[ $EUID -ne 0 ]]; then
     fail "Production install requires root. Run with sudo or use --dev for dev mode."
