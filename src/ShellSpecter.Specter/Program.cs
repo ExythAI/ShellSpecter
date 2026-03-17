@@ -82,23 +82,47 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 // Auth endpoint
-app.MapPost("/api/auth/login", (LoginRequest request) =>
+app.MapPost("/api/auth/login", (LoginRequest request, ILogger<Program> logger) =>
 {
-    // On Linux, validate via PAM; on other platforms, accept any non-empty credentials for demo
-    bool isAuthenticated;
-    if (OperatingSystem.IsLinux())
+    if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
     {
-        isAuthenticated = PamAuth.Authenticate(request.Username, request.Password);
+        return Results.Json(new { error = "Username and password required" }, statusCode: 401);
+    }
+
+    bool isAuthenticated;
+    string? authError = null;
+
+    // Check for fallback mode (useful when PAM is not available)
+    var allowAny = Environment.GetEnvironmentVariable("SHELLSPECTER_ALLOW_ANY_LOGIN");
+    if (string.Equals(allowAny, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        isAuthenticated = true;
+        logger.LogWarning("SHELLSPECTER_ALLOW_ANY_LOGIN is enabled — accepting login for {User}", request.Username);
+    }
+    else if (OperatingSystem.IsLinux())
+    {
+        try
+        {
+            isAuthenticated = PamAuth.Authenticate(request.Username, request.Password);
+            if (!isAuthenticated)
+                authError = "Invalid credentials";
+        }
+        catch (Exception ex)
+        {
+            isAuthenticated = false;
+            authError = $"PAM error: {ex.Message}";
+            logger.LogError(ex, "PAM authentication failed for user {User}", request.Username);
+        }
     }
     else
     {
         // Demo mode: accept any login with non-empty credentials
-        isAuthenticated = !string.IsNullOrEmpty(request.Username) && !string.IsNullOrEmpty(request.Password);
+        isAuthenticated = true;
     }
 
     if (!isAuthenticated)
     {
-        return Results.Unauthorized();
+        return Results.Json(new { error = authError ?? "Authentication failed" }, statusCode: 401);
     }
 
     var token = JwtHelper.GenerateToken(request.Username, jwtSecret);

@@ -23,6 +23,8 @@ PrivateTmp=true
 # Environment
 Environment=DOTNET_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://0.0.0.0:5050
+# Set to false once PAM auth is confirmed working
+Environment=SHELLSPECTER_ALLOW_ANY_LOGIN=true
 
 [Install]
 WantedBy=multi-user.target
