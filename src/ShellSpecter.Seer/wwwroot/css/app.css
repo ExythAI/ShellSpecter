@@ -391,6 +391,24 @@ body {
     padding: 1rem;
 }
 
+/* Toggle button (used in NetworkPanel to show/hide virtual interfaces) */
+.toggle-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-dim);
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: var(--cyan);
+    color: var(--cyan);
+}
+
 /* --- Stat Cards --- */
 .stat-row {
     display: flex;

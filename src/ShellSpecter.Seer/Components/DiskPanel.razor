@@ -1,0 +1,65 @@
+@* Disk I/O — Separate panel *@
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">💾</span> Disk I/O
+    </span>
+    <span class="live-indicator">Live</span>
+</div>
+<div class="panel-body">
+    @if (Disks != null && Disks.Length > 0)
+    {
+        <div class="bar-container">
+            @foreach (var disk in Disks)
+            {
+                <div class="bar-row">
+                    <span class="bar-label">@disk.DeviceName</span>
+                    <span class="stat-unit" style="min-width: 20px;">R</span>
+                    <div class="bar-track">
+                        <div class="bar-fill cyan" style="width: @GetBarWidth(disk.ReadKbPerSec, _maxKbps)%"></div>
+                    </div>
+                    <span class="bar-value text-cyan">@FormatSpeed(disk.ReadKbPerSec)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label"></span>
+                    <span class="stat-unit" style="min-width: 20px;">W</span>
+                    <div class="bar-track">
+                        <div class="bar-fill magenta" style="width: @GetBarWidth(disk.WriteKbPerSec, _maxKbps)%"></div>
+                    </div>
+                    <span class="bar-value" style="color: var(--magenta);">@FormatSpeed(disk.WriteKbPerSec)</span>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="stat-label" style="opacity: 0.4;">No disk I/O data</div>
+    }
+</div>
+
+@code {
+    [Parameter] public DiskSnapshot[]? Disks { get; set; }
+
+    private double _maxKbps = 100000;
+
+    protected override void OnParametersSet()
+    {
+        if (Disks != null)
+        {
+            var max = Disks.SelectMany(d => new[] { d.ReadKbPerSec, d.WriteKbPerSec }).DefaultIfEmpty(0).Max();
+            _maxKbps = Math.Max(1000, max * 1.5);
+        }
+    }
+
+    private static string GetBarWidth(double value, double max)
+    {
+        var pct = max > 0 ? value / max * 100 : 0;
+        return Math.Clamp(pct, 0, 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatSpeed(double kbps)
+    {
+        if (kbps >= 1024 * 1024) return $"{kbps / 1024 / 1024:F1} GB/s";
+        if (kbps >= 1024) return $"{kbps / 1024:F1} MB/s";
+        return $"{kbps:F0} KB/s";
+    }
+}
