@@ -4,7 +4,6 @@
 
 A decoupled daemon-and-dashboard architecture: deploy the **Specter** agent to your Linux machines and monitor them from the **Seer** dashboard in your browser — with live-streaming telemetry at 500ms intervals.
 
-![Dashboard Screenshot](docs/dashboard.png)
 
 ---
 
@@ -106,40 +105,18 @@ sudo ./deploy.sh          # Full production install
 ```
 
 <details>
-<summary>Manual step-by-step (click to expand)</summary>
-# 1. Clone and build a self-contained release binary
-git clone https://github.com/ExythAI/ShellSpecter.git
-cd ShellSpecter
-dotnet publish src/ShellSpecter.Specter -c Release -r linux-x64 --self-contained true -o /opt/shellspecter
+<summary>What deploy.sh does (click to expand)</summary>
 
-# 2. Build the Seer dashboard and copy to the daemon's wwwroot
-dotnet publish src/ShellSpecter.Seer -c Release -o /tmp/seer-publish
-cp -r /tmp/seer-publish/wwwroot /opt/shellspecter/wwwroot
+1. Installs .NET 10 SDK if missing
+2. Clones and builds both Specter and Seer in Release mode
+3. Copies binaries to `/opt/shellspecter/`
+4. Fixes .NET 10 fingerprinted framework files for static serving
+5. Generates a secure random JWT secret
+6. Creates a `specter` service user with PAM access
+7. Installs and enables the systemd service
+8. Opens firewall port 5050 (UFW or firewalld)
+9. Starts the service and prints the dashboard URL
 
-# 3. Create a service user
-sudo useradd -r -s /sbin/nologin specter
-
-# 4. Set ownership and permissions
-sudo chown -R specter:specter /opt/shellspecter
-sudo chmod +x /opt/shellspecter/ShellSpecter.Specter
-
-# 5. Update the JWT secret in production
-sudo nano /opt/shellspecter/appsettings.json
-# Change "Jwt:Secret" to a strong random string
-# Update "AllowedOrigins" to your dashboard URL if hosting separately
-
-# 6. Install the systemd service
-sudo cp shellspecter.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now shellspecter
-
-# 7. Check status
-sudo systemctl status shellspecter
-sudo journalctl -u shellspecter -f
-
-# 8. Access the dashboard
-#    Open http://<server-ip>:5050 in your browser
-#    Login with your Linux system credentials
 ```
 
 </details>
@@ -182,6 +159,7 @@ ShellSpecter/
 │       ├── Layout/                # MainLayout with sidebar
 │       ├── Services/              # AuthService, NodeManager
 │       └── wwwroot/               # CSS theme, JS charts, index.html
+├── deploy.sh                       # Automated Linux deploy script
 ├── shellspecter.service            # systemd unit file
 ├── docker-compose.yml              # Docker deployment
 ├── run.bat                         # Windows dev launcher
@@ -194,14 +172,29 @@ ShellSpecter/
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `Jwt:Secret` | (built-in) | HMAC-SHA256 signing key — **change in production** |
+| `Jwt:Secret` | (auto-generated) | HMAC-SHA256 signing key — auto-set by `deploy.sh` |
 | `AllowedOrigins` | `http://localhost:*` | CORS allowed origins for the dashboard |
-| `ASPNETCORE_URLS` | `http://[::]:5050` | Listen address |
+| `ASPNETCORE_URLS` | `http://0.0.0.0:5050` | Listen address |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SHELLSPECTER_ALLOW_ANY_LOGIN` | `true` | Set to `false` to require PAM authentication |
+| `DOTNET_ENVIRONMENT` | `Production` | .NET environment |
 
 ### Authentication
 
-- **Linux**: Uses PAM — login with real system credentials
+- **Linux (PAM)**: Set `SHELLSPECTER_ALLOW_ANY_LOGIN=false` in the systemd service, then login with real system credentials
+- **Linux (default)**: Accepts any non-empty credentials (for easy initial setup)
 - **Windows/macOS**: Mock mode — any credentials accepted for development
+
+To enable PAM auth:
+```bash
+sudo systemctl edit shellspecter
+# Add: Environment=SHELLSPECTER_ALLOW_ANY_LOGIN=false
+sudo systemctl restart shellspecter
+```
 
 ## 🎨 Theme
 
@@ -227,6 +220,16 @@ The "Spectral" dark theme features:
 - **500ms collection interval** via `PeriodicTimer`
 - **Native AOT** compatible for minimal binary size on Linux
 - **Channel-based** SignalR streaming for backpressure support
+
+## 🔍 Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Service won't start | `sudo journalctl -u shellspecter -f` for logs |
+| Login returns 401 | Check `SHELLSPECTER_ALLOW_ANY_LOGIN` is `true`, or verify PAM setup |
+| Blank page after login | Hard refresh (Ctrl+Shift+R) to clear cached WASM files |
+| Fonts not loading | Server can't reach Google Fonts — cosmetic only, system fonts used as fallback |
+| Port 5050 not accessible | Check firewall: `sudo ufw allow 5050/tcp` |
 
 ## 📜 License
 
