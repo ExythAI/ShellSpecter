@@ -75,7 +75,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Serve the Seer Blazor WASM app (when deployed together)
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "application/octet-stream"
+});
 
 // Auth endpoint
 app.MapPost("/api/auth/login", (LoginRequest request) =>
