@@ -123,29 +123,32 @@ cp -r "$WORK_DIR/publish/"* "$INSTALL_DIR/"
 cp -r "$WORK_DIR/seer-publish/wwwroot" "$INSTALL_DIR/wwwroot" 2>/dev/null || true
 
 # .NET 10 fingerprints _framework files (e.g. blazor.webassembly.{hash}.js)
-# Create symlinks from the original names that index.html expects
+# Copy fingerprinted files to their original names that index.html expects
+# Also remove pre-compressed .br/.gz variants to prevent content negotiation issues
 if [ -d "$INSTALL_DIR/wwwroot/_framework" ]; then
-    log "Creating framework file symlinks..."
+    log "Fixing framework file names..."
     cd "$INSTALL_DIR/wwwroot/_framework"
-    for f in *.*.js *.*.wasm; do
+
+    # Remove pre-compressed files — UseStaticFiles can misserve them
+    rm -f *.br *.gz 2>/dev/null || true
+
+    # Copy fingerprinted files to their original names
+    # Pattern: name.fingerprint.ext -> name.ext
+    for f in *.*.*; do
         [ -f "$f" ] || continue
-        # Extract original name: blazor.webassembly.66stpp682q.js -> blazor.webassembly.js
-        # Pattern: name.fingerprint.ext -> name.ext
-        orig=$(echo "$f" | sed -E 's/^(.+)\.[a-z0-9]+\.([^.]+)$/\1.\2/')
+        # Skip if no fingerprint pattern (must have at least 3 dot-separated parts)
+        ext="${f##*.}"
+        base="${f%.*}"          # Remove last extension: name.hash
+        name="${base%.*}"       # Remove hash: name
+        orig="${name}.${ext}"   # Original name: name.ext
+
+        # Only copy if the name differs and target doesn't exist
         if [ "$orig" != "$f" ] && [ ! -e "$orig" ]; then
-            ln -sf "$f" "$orig"
-        fi
-    done
-    # Also handle dotnet.native files
-    for f in dotnet.native.*.wasm dotnet.native.*.js; do
-        [ -f "$f" ] || continue
-        orig=$(echo "$f" | sed -E 's/^(.+)\.[a-z0-9]+\.([^.]+)$/\1.\2/')
-        if [ "$orig" != "$f" ] && [ ! -e "$orig" ]; then
-            ln -sf "$f" "$orig"
+            cp "$f" "$orig"
         fi
     done
     cd - >/dev/null
-    ok "Framework symlinks created"
+    ok "Framework files fixed"
 fi
 ok "Binaries installed to ${INSTALL_DIR}"
 
