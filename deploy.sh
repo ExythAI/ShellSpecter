@@ -118,7 +118,15 @@ systemctl stop "$SERVICE_NAME" 2>/dev/null || true
 # Copy binaries
 mkdir -p "$INSTALL_DIR"
 cp -r "$WORK_DIR/publish/"* "$INSTALL_DIR/"
+
+# Copy Seer WASM files into the Specter's wwwroot
 cp -r "$WORK_DIR/seer-publish/wwwroot" "$INSTALL_DIR/wwwroot" 2>/dev/null || true
+
+# Copy the static assets manifest (required for .NET 10 fingerprinted file mapping)
+if [ -f "$WORK_DIR/seer-publish/ShellSpecter.Seer.staticwebassets.endpoints.json" ]; then
+    cp "$WORK_DIR/seer-publish/ShellSpecter.Seer.staticwebassets.endpoints.json" \
+       "$INSTALL_DIR/ShellSpecter.Seer.staticwebassets.endpoints.json"
+fi
 ok "Binaries installed to ${INSTALL_DIR}"
 
 # ── Step 6: Generate a secure JWT secret ──────────────────────

@@ -76,7 +76,7 @@ app.UseAuthorization();
 
 // Serve the Seer Blazor WASM app (when deployed together)
 app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+app.MapStaticAssets();
 
 // Auth endpoint
 app.MapPost("/api/auth/login", (LoginRequest request) =>
