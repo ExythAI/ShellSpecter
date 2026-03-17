@@ -1,0 +1,112 @@
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">👻</span> The Spirit List
+    </span>
+    @if (Processes != null)
+    {
+        <span class="panel-badge">@Processes.Length processes</span>
+    }
+</div>
+<div class="panel-body">
+    <div class="process-table-container">
+        <table class="process-table" id="spirit-list">
+            <thead>
+                <tr>
+                    <th class="@SortClass("pid")" @onclick='() => SetSort("pid")'>PID</th>
+                    <th class="@SortClass("name")" @onclick='() => SetSort("name")'>Name</th>
+                    <th class="@SortClass("cpu")" @onclick='() => SetSort("cpu")'>CPU %</th>
+                    <th class="@SortClass("mem")" @onclick='() => SetSort("mem")'>Memory</th>
+                    <th>State</th>
+                    <th class="@SortClass("ppid")" @onclick='() => SetSort("ppid")'>PPID</th>
+                    <th class="@SortClass("nice")" @onclick='() => SetSort("nice")'>Nice</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_sortedProcesses != null)
+                {
+                    @foreach (var proc in _sortedProcesses)
+                    {
+                        <tr>
+                            <td class="pid-col">@proc.Pid</td>
+                            <td class="name-col">@proc.Name</td>
+                            <td class="cpu-col">
+                                @proc.CpuPercent.ToString("F1")
+                                <span class="cpu-bar-inline">
+                                    <span class="cpu-bar-inline-fill" style="width: @Math.Clamp(proc.CpuPercent, 0, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+                                </span>
+                            </td>
+                            <td class="mem-col">@FormatMemory(proc.MemoryKb)</td>
+                            <td class="state-col">
+                                <span style="color: @GetStateColor(proc.State);">@proc.State</span>
+                            </td>
+                            <td class="pid-col">@proc.ParentPid</td>
+                            <td>@proc.Nice</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProcessSnapshot[]? Processes { get; set; }
+
+    private string _sortField = "cpu";
+    private bool _sortDesc = true;
+    private ProcessSnapshot[]? _sortedProcesses;
+
+    protected override void OnParametersSet()
+    {
+        _sortedProcesses = ApplySort(Processes);
+    }
+
+    private void SetSort(string field)
+    {
+        if (_sortField == field)
+            _sortDesc = !_sortDesc;
+        else
+        {
+            _sortField = field;
+            _sortDesc = true;
+        }
+        _sortedProcesses = ApplySort(Processes);
+    }
+
+    private ProcessSnapshot[]? ApplySort(ProcessSnapshot[]? procs)
+    {
+        if (procs == null) return null;
+
+        IEnumerable<ProcessSnapshot> sorted = _sortField switch
+        {
+            "pid" => _sortDesc ? procs.OrderByDescending(p => p.Pid) : procs.OrderBy(p => p.Pid),
+            "name" => _sortDesc ? procs.OrderByDescending(p => p.Name) : procs.OrderBy(p => p.Name),
+            "cpu" => _sortDesc ? procs.OrderByDescending(p => p.CpuPercent) : procs.OrderBy(p => p.CpuPercent),
+            "mem" => _sortDesc ? procs.OrderByDescending(p => p.MemoryKb) : procs.OrderBy(p => p.MemoryKb),
+            "ppid" => _sortDesc ? procs.OrderByDescending(p => p.ParentPid) : procs.OrderBy(p => p.ParentPid),
+            "nice" => _sortDesc ? procs.OrderByDescending(p => p.Nice) : procs.OrderBy(p => p.Nice),
+            _ => procs.OrderByDescending(p => p.CpuPercent)
+        };
+
+        return sorted.ToArray();
+    }
+
+    private string SortClass(string field) => _sortField == field ? "sorted" : "";
+
+    private static string FormatMemory(long kb)
+    {
+        if (kb >= 1024 * 1024) return $"{kb / 1024.0 / 1024.0:F1} GB";
+        if (kb >= 1024) return $"{kb / 1024.0:F1} MB";
+        return $"{kb} KB";
+    }
+
+    private static string GetStateColor(char state) => state switch
+    {
+        'R' => "var(--green)",
+        'S' => "var(--text-dim)",
+        'D' => "var(--red)",
+        'Z' => "var(--magenta)",
+        'T' => "var(--amber)",
+        _ => "var(--text-secondary)"
+    };
+}

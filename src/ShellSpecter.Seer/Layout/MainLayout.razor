@@ -1,0 +1,107 @@
+@inherits LayoutComponentBase
+@inject Services.AuthService Auth
+@inject Services.NodeManager Nodes
+
+@if (!Auth.IsAuthenticated)
+{
+    @Body
+}
+else
+{
+    <div class="shell-layout">
+        <header class="top-bar">
+            <div class="brand">
+                <span class="brand-icon">👻</span>
+                <div>
+                    <div class="brand-name">ShellSpecter</div>
+                    <div class="brand-tag">System Observatory</div>
+                </div>
+            </div>
+            <div class="top-bar-info">
+                <div class="live-indicator">Live</div>
+                <span class="mono" style="color: var(--text-dim); font-size: 0.7rem;">@DateTime.Now.ToString("HH:mm:ss")</span>
+                <button class="btn-sm" @onclick="Logout">Logout</button>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">Nodes</div>
+                @foreach (var node in Nodes.Nodes)
+                {
+                    <div class="node-item @(node.Key == _selectedNode ? "active" : "")"
+                         @onclick="() => SelectNode(node.Key)">
+                        <span class="node-status @GetStatusClass(node.Value.Status)"></span>
+                        <span>@GetNodeDisplayName(node.Value)</span>
+                    </div>
+                }
+            </div>
+
+            <div class="connection-form">
+                <div class="sidebar-label">Connect Node</div>
+                <div class="connection-input-row">
+                    <input class="connection-input" 
+                           placeholder="http://host:5050" 
+                           @bind="_newNodeUrl"
+                           @onkeydown="HandleKeyDown" />
+                    <button class="btn-sm" @onclick="AddNode">+</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            @Body
+        </main>
+    </div>
+}
+
+@code {
+    private string _newNodeUrl = "";
+    private string? _selectedNode;
+
+    protected override void OnInitialized()
+    {
+        Auth.OnAuthStateChanged += StateHasChanged;
+        Nodes.OnConnectionStateChanged += () => InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddNode()
+    {
+        if (string.IsNullOrWhiteSpace(_newNodeUrl)) return;
+        var url = _newNodeUrl.Trim();
+        if (!url.StartsWith("http")) url = "http://" + url;
+        await Nodes.ConnectAsync(url);
+        _selectedNode ??= url;
+        _newNodeUrl = "";
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddNode();
+    }
+
+    private void SelectNode(string url) => _selectedNode = url;
+
+    private void Logout() => Auth.Logout();
+
+    private static string GetStatusClass(Services.ConnectionStatus status) => status switch
+    {
+        Services.ConnectionStatus.Connected => "connected",
+        Services.ConnectionStatus.Connecting => "connecting",
+        Services.ConnectionStatus.Error => "error",
+        _ => ""
+    };
+
+    private static string GetNodeDisplayName(Services.NodeConnection node)
+    {
+        if (node.LatestSnapshot != null && !string.IsNullOrEmpty(node.LatestSnapshot.HostName))
+            return node.LatestSnapshot.HostName;
+
+        try
+        {
+            var uri = new Uri(node.Url);
+            return uri.Host;
+        }
+        catch { return node.Url; }
+    }
+}

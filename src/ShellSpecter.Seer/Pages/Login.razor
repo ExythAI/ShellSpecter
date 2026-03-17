@@ -1,0 +1,95 @@
+@page "/"
+@page "/login"
+@inject Services.AuthService Auth
+@inject NavigationManager Nav
+@inject HttpClient Http
+
+@if (Auth.IsAuthenticated)
+{
+    <ShellSpecter.Seer.Pages.Dashboard />
+}
+else
+{
+    <div class="login-page">
+        <div class="login-card fade-in">
+            <h1 class="login-title">👻 ShellSpecter</h1>
+            <p class="login-subtitle">Authenticate with your system credentials</p>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="login-error">@_error</div>
+            }
+
+            <EditForm Model="_loginModel" OnValidSubmit="HandleLogin" FormName="login">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <InputText id="username" class="form-input" @bind-Value="_loginModel.Username"
+                               placeholder="root" autocomplete="username" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <InputText id="password" type="password" class="form-input" @bind-Value="_loginModel.Password"
+                               placeholder="••••••••" autocomplete="current-password" />
+                </div>
+                <button type="submit" class="btn btn-primary" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span>Authenticating...</span>
+                    }
+                    else
+                    {
+                        <span>Enter the Observatory</span>
+                    }
+                </button>
+            </EditForm>
+
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <div class="sidebar-label">Specter Endpoint</div>
+                <div class="connection-input-row" style="justify-content: center;">
+                    <input class="connection-input" style="max-width: 260px;"
+                           @bind="_specterUrl" placeholder="http://localhost:5050" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private LoginRequest _loginModel = new();
+    private string _specterUrl = "http://localhost:5050";
+    private string? _error;
+    private bool _isLoading;
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        _isLoading = true;
+
+        try
+        {
+            var baseUrl = _specterUrl.TrimEnd('/');
+            var response = await Http.PostAsJsonAsync($"{baseUrl}/api/auth/login", _loginModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (result != null)
+                {
+                    Auth.SetToken(result.Token);
+                }
+            }
+            else
+            {
+                _error = "Authentication failed. Check your credentials.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Cannot reach Specter at {_specterUrl}: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

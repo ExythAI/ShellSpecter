@@ -1,0 +1,100 @@
+@inject IJSRuntime JS
+
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">⚡</span> CPU Utilization
+    </span>
+    @if (Snapshot?.Cores != null)
+    {
+        <span class="panel-badge">@Snapshot.Cores.Length cores</span>
+    }
+</div>
+<div class="panel-body">
+    @* Load Averages & Total *@
+    <div class="stat-row mb-2">
+        <div class="stat-card">
+            <div class="stat-label">Total Usage</div>
+            <div class="stat-value cyan">@FormatPct(100 - (Snapshot?.TotalIdle ?? 100))%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">User</div>
+            <div class="stat-value" style="color: var(--cyan);">@FormatPct(Snapshot?.TotalUser ?? 0)%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">System</div>
+            <div class="stat-value" style="color: var(--purple);">@FormatPct(Snapshot?.TotalSystem ?? 0)%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">I/O Wait</div>
+            <div class="stat-value amber">@FormatPct(Snapshot?.TotalIoWait ?? 0)%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Load 1m</div>
+            <div class="stat-value">@(Load?.Load1.ToString("F2") ?? "—")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Load 5m</div>
+            <div class="stat-value">@(Load?.Load5.ToString("F2") ?? "—")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Load 15m</div>
+            <div class="stat-value">@(Load?.Load15.ToString("F2") ?? "—")</div>
+        </div>
+    </div>
+
+    @* Per-Core Sparklines *@
+    <div class="sparkline-grid">
+        @if (Snapshot?.Cores != null)
+        {
+            @foreach (var core in Snapshot.Cores)
+            {
+                var coreUsage = 100 - core.Idle;
+                var canvasId = $"spark-cpu-{core.CoreId}";
+
+                <div class="sparkline-cell">
+                    <div class="sparkline-cell-label">Core @core.CoreId</div>
+                    <div class="sparkline-cell-value">@FormatPct(coreUsage)%</div>
+                    <canvas id="@canvasId" class="sparkline-canvas"></canvas>
+                    @if (core.FrequencyMhz > 0)
+                    {
+                        <div class="stat-unit" style="margin-top: 2px;">@core.FrequencyMhz.ToString("F0") MHz</div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public CpuSnapshot? Snapshot { get; set; }
+    [Parameter] public LoadAverage? Load { get; set; }
+
+    private readonly Dictionary<int, List<double>> _history = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Snapshot?.Cores == null) return;
+
+        foreach (var core in Snapshot.Cores)
+        {
+            var usage = 100 - core.Idle;
+
+            if (!_history.ContainsKey(core.CoreId))
+                _history[core.CoreId] = new List<double>();
+
+            var hist = _history[core.CoreId];
+            hist.Add(usage);
+            if (hist.Count > 60) hist.RemoveAt(0);
+
+            var canvasId = $"spark-cpu-{core.CoreId}";
+            try
+            {
+                await JS.InvokeVoidAsync("shellSpecterCharts.drawSparkline",
+                    canvasId, hist.ToArray(), "#00e5ff", "rgba(0, 229, 255, 0.15)");
+            }
+            catch { /* Canvas may not be ready */ }
+        }
+    }
+
+    private static string FormatPct(double val) => val.ToString("F1");
+}

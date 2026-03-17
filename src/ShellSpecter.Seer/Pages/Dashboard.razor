@@ -1,0 +1,65 @@
+@page "/dashboard"
+@inject Services.NodeManager Nodes
+@inject Services.AuthService Auth
+@implements IDisposable
+
+<div class="dashboard-grid fade-in">
+    @* System Info Panel *@
+    <div class="panel panel-third">
+        <SystemInfoPanel Info="@_snapshot?.System" />
+    </div>
+
+    @* CPU Panel *@
+    <div class="panel panel-two-thirds">
+        <CpuPanel Snapshot="@_snapshot?.Cpu" Load="@_snapshot?.Load" />
+    </div>
+
+    @* Memory Panel *@
+    <div class="panel panel-third">
+        <MemoryPanel Snapshot="@_snapshot?.Memory" Pressure="@_snapshot?.Pressure" />
+    </div>
+
+    @* GPU Panel *@
+    @if (_snapshot?.Gpus?.Length > 0)
+    {
+        <div class="panel panel-third">
+            <GpuPanel Gpus="@_snapshot.Gpus" />
+        </div>
+    }
+
+    @* Disk & Network *@
+    <div class="panel @(_snapshot?.Gpus?.Length > 0 ? "panel-third" : "panel-two-thirds")">
+        <DiskNetPanel Disks="@_snapshot?.Disks" Networks="@_snapshot?.Networks" />
+    </div>
+
+    @* Process Table *@
+    <div class="panel panel-full">
+        <ProcessTable Processes="@_snapshot?.Processes" />
+    </div>
+</div>
+
+@code {
+    private SystemSnapshot? _snapshot;
+
+    protected override void OnInitialized()
+    {
+        Nodes.OnSnapshot += HandleSnapshot;
+
+        // If no nodes connected, auto-connect to localhost
+        if (Nodes.Nodes.Count == 0)
+        {
+            _ = Nodes.ConnectAsync("http://localhost:5050");
+        }
+    }
+
+    private void HandleSnapshot(string nodeUrl, SystemSnapshot snapshot)
+    {
+        _snapshot = snapshot;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Nodes.OnSnapshot -= HandleSnapshot;
+    }
+}

@@ -1,0 +1,96 @@
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">💾</span> Disk & Network I/O
+    </span>
+    <span class="live-indicator">Live</span>
+</div>
+<div class="panel-body">
+    @* Disk I/O *@
+    @if (Disks != null && Disks.Length > 0)
+    {
+        <div class="stat-label mb-1">Disk Throughput</div>
+        <div class="bar-container">
+            @foreach (var disk in Disks)
+            {
+                <div class="bar-row">
+                    <span class="bar-label">@disk.DeviceName</span>
+                    <span class="stat-unit" style="min-width: 20px;">R</span>
+                    <div class="bar-track">
+                        <div class="bar-fill cyan" style="width: @GetBarWidth(disk.ReadKbPerSec, _maxDiskKbps)%"></div>
+                    </div>
+                    <span class="bar-value text-cyan">@FormatSpeed(disk.ReadKbPerSec)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label"></span>
+                    <span class="stat-unit" style="min-width: 20px;">W</span>
+                    <div class="bar-track">
+                        <div class="bar-fill magenta" style="width: @GetBarWidth(disk.WriteKbPerSec, _maxDiskKbps)%"></div>
+                    </div>
+                    <span class="bar-value" style="color: var(--magenta);">@FormatSpeed(disk.WriteKbPerSec)</span>
+                </div>
+            }
+        </div>
+    }
+
+    @* Network I/O *@
+    @if (Networks != null && Networks.Length > 0)
+    {
+        <div class="stat-label mb-1 mt-1">Network Bandwidth</div>
+        <div class="bar-container">
+            @foreach (var net in Networks)
+            {
+                <div class="bar-row">
+                    <span class="bar-label">@net.InterfaceName</span>
+                    <span class="stat-unit" style="min-width: 20px;">Rx</span>
+                    <div class="bar-track">
+                        <div class="bar-fill green" style="width: @GetBarWidth(net.RxKbPerSec, _maxNetKbps)%"></div>
+                    </div>
+                    <span class="bar-value text-green">@FormatSpeed(net.RxKbPerSec)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label"></span>
+                    <span class="stat-unit" style="min-width: 20px;">Tx</span>
+                    <div class="bar-track">
+                        <div class="bar-fill purple" style="width: @GetBarWidth(net.TxKbPerSec, _maxNetKbps)%"></div>
+                    </div>
+                    <span class="bar-value text-purple">@FormatSpeed(net.TxKbPerSec)</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DiskSnapshot[]? Disks { get; set; }
+    [Parameter] public NetworkSnapshot[]? Networks { get; set; }
+
+    private double _maxDiskKbps = 100000; // 100 MB/s default scale
+    private double _maxNetKbps = 50000;   // 50 MB/s default scale
+
+    protected override void OnParametersSet()
+    {
+        if (Disks != null)
+        {
+            var maxDisk = Disks.SelectMany(d => new[] { d.ReadKbPerSec, d.WriteKbPerSec }).DefaultIfEmpty(0).Max();
+            _maxDiskKbps = Math.Max(1000, maxDisk * 1.5);
+        }
+        if (Networks != null)
+        {
+            var maxNet = Networks.SelectMany(n => new[] { n.RxKbPerSec, n.TxKbPerSec }).DefaultIfEmpty(0).Max();
+            _maxNetKbps = Math.Max(1000, maxNet * 1.5);
+        }
+    }
+
+    private static string GetBarWidth(double value, double max)
+    {
+        var pct = max > 0 ? value / max * 100 : 0;
+        return Math.Clamp(pct, 0, 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatSpeed(double kbps)
+    {
+        if (kbps >= 1024 * 1024) return $"{kbps / 1024 / 1024:F1} GB/s";
+        if (kbps >= 1024) return $"{kbps / 1024:F1} MB/s";
+        return $"{kbps:F0} KB/s";
+    }
+}

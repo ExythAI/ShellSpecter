@@ -1,0 +1,57 @@
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">🎮</span> GPU
+    </span>
+    @if (Gpus != null)
+    {
+        <span class="panel-badge">@Gpus.Length device(s)</span>
+    }
+</div>
+<div class="panel-body">
+    <div class="gpu-cards">
+        @if (Gpus != null)
+        {
+            @foreach (var gpu in Gpus)
+            {
+                var vramPct = gpu.VramTotalMb > 0 ? (double)gpu.VramUsedMb / gpu.VramTotalMb * 100 : 0;
+
+                <div class="gpu-card">
+                    <div class="gpu-card-header">
+                        <span class="gpu-name">@gpu.Name</span>
+                        <span class="gpu-temp @GetTempColorClass(gpu.TemperatureC)">@gpu.TemperatureC.ToString("F0")°C</span>
+                    </div>
+                    <div class="gpu-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Core</div>
+                            <div class="stat-value purple">@gpu.CoreLoadPercent.ToString("F0")%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Power</div>
+                            <div class="stat-value">@gpu.PowerWatts.ToString("F0")<span class="stat-unit">W</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-1">
+                        <div class="flex-between mb-1">
+                            <span class="stat-label">VRAM</span>
+                            <span class="stat-unit">@gpu.VramUsedMb / @gpu.VramTotalMb MB</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill purple" style="width: @vramPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public GpuSnapshot[]? Gpus { get; set; }
+
+    private static string GetTempColorClass(double temp) => temp switch
+    {
+        > 85 => "text-red",
+        > 70 => "text-amber",
+        _ => "text-green"
+    };
+}

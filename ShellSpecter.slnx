@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ShellSpecter.Seer/ShellSpecter.Seer.csproj" />
+    <Project Path="src/ShellSpecter.Shared/ShellSpecter.Shared.csproj" />
+    <Project Path="src/ShellSpecter.Specter/ShellSpecter.Specter.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,29 @@
+[Unit]
+Description=ShellSpecter System Observatory Daemon
+Documentation=https://github.com/shellspecter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/opt/shellspecter/ShellSpecter.Specter
+WorkingDirectory=/opt/shellspecter
+User=specter
+Group=specter
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# Security hardening
+ProtectHome=yes
+ProtectSystem=strict
+ReadOnlyPaths=/proc /sys
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Environment
+Environment=DOTNET_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5050
+
+[Install]
+WantedBy=multi-user.target

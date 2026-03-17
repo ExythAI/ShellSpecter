@@ -1,0 +1,101 @@
+@inject IJSRuntime JS
+
+<div class="panel-header">
+    <span class="panel-title">
+        <span class="panel-title-icon">🧠</span> Memory
+    </span>
+    @if (Snapshot != null)
+    {
+        <span class="panel-badge">@FormatGb(Snapshot.TotalKb) GB</span>
+    }
+</div>
+<div class="panel-body">
+    @if (Snapshot != null)
+    {
+        var usedPct = Snapshot.TotalKb > 0 ? (double)Snapshot.UsedKb / Snapshot.TotalKb * 100 : 0;
+        var buffersPct = Snapshot.TotalKb > 0 ? (double)Snapshot.BuffersKb / Snapshot.TotalKb * 100 : 0;
+        var cachedPct = Snapshot.TotalKb > 0 ? (double)Snapshot.CachedKb / Snapshot.TotalKb * 100 : 0;
+        var availPct = 100 - usedPct;
+
+        @* Gauge *@
+        <div class="gauge-container">
+            <canvas id="mem-gauge" style="width: 120px; height: 78px;"></canvas>
+            <div class="gauge-value @GetUsageColor(usedPct)">@usedPct.ToString("F1")%</div>
+            <div class="gauge-label">Used</div>
+        </div>
+
+        @* Stacked Bar *@
+        <div class="memory-stacked-bar">
+            <div class="memory-segment used" style="width: @((usedPct - buffersPct - cachedPct).ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            <div class="memory-segment buffers" style="width: @buffersPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+            <div class="memory-segment cached" style="width: @cachedPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+            <div class="memory-segment available" style="width: @availPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+        </div>
+
+        <div class="memory-legend">
+            <div class="memory-legend-item"><span class="memory-legend-dot" style="background: var(--magenta);"></span> Used @FormatGb(Snapshot.UsedKb - Snapshot.BuffersKb - Snapshot.CachedKb) GB</div>
+            <div class="memory-legend-item"><span class="memory-legend-dot" style="background: var(--purple);"></span> Buffers @FormatGb(Snapshot.BuffersKb) GB</div>
+            <div class="memory-legend-item"><span class="memory-legend-dot" style="background: var(--cyan-dim);"></span> Cached @FormatGb(Snapshot.CachedKb) GB</div>
+            <div class="memory-legend-item"><span class="memory-legend-dot" style="background: rgba(255,255,255,0.06);"></span> Available @FormatGb(Snapshot.AvailableKb) GB</div>
+        </div>
+
+        @* Swap *@
+        @if (Snapshot.SwapTotalKb > 0)
+        {
+            var swapPct = (double)Snapshot.SwapUsedKb / Snapshot.SwapTotalKb * 100;
+            <div class="mt-1">
+                <div class="flex-between mb-1">
+                    <span class="stat-label">Swap</span>
+                    <span class="stat-unit">@FormatGb(Snapshot.SwapUsedKb) / @FormatGb(Snapshot.SwapTotalKb) GB</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill amber" style="width: @swapPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                </div>
+            </div>
+        }
+
+        @* PSI *@
+        @if (Pressure != null)
+        {
+            <div class="stat-row mt-1">
+                <div class="stat-card">
+                    <div class="stat-label">PSI Some</div>
+                    <div class="stat-value @(Pressure.SomeAvg10 > 10 ? "red" : "")">@Pressure.SomeAvg10.ToString("F1")%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">PSI Full</div>
+                    <div class="stat-value @(Pressure.FullAvg10 > 5 ? "red" : "")">@Pressure.FullAvg10.ToString("F1")%</div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public MemorySnapshot? Snapshot { get; set; }
+    [Parameter] public PressureSnapshot? Pressure { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Snapshot == null) return;
+
+        var usedPct = Snapshot.TotalKb > 0 ? (double)Snapshot.UsedKb / Snapshot.TotalKb * 100 : 0;
+        var color = usedPct > 85 ? "#ff5252" : usedPct > 60 ? "#ffd740" : "#00e5ff";
+
+        try
+        {
+            await JS.InvokeVoidAsync("shellSpecterCharts.drawGauge",
+                "mem-gauge", usedPct, color, "rgba(255,255,255,0.06)");
+        }
+        catch { }
+    }
+
+    private static string FormatGb(long kb) => (kb / 1024.0 / 1024.0).ToString("F1");
+
+    private static string GetUsageColor(double pct) => pct switch
+    {
+        > 85 => "red",
+        > 60 => "amber",
+        _ => "cyan"
+    };
+}

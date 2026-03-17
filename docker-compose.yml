@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  specter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shellspecter:latest
+    container_name: shellspecter
+    ports:
+      - "5050:5050"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    devices:
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:5050
+      - DOTNET_ENVIRONMENT=Production
+      - Jwt__Secret=${JWT_SECRET:-ShellSpecter-Default-Secret-Change-Me-In-Production-2024!}
+    restart: unless-stopped
+    privileged: false
+    cap_add:
+      - DAC_READ_SEARCH  # Read /etc/shadow for PAM auth
+    security_opt:
+      - no-new-privileges:true
