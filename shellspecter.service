@@ -18,7 +18,6 @@ LimitNOFILE=65536
 ProtectHome=yes
 ProtectSystem=full
 ReadOnlyPaths=/proc /sys
-NoNewPrivileges=true
 PrivateTmp=true
 
 # Environment
