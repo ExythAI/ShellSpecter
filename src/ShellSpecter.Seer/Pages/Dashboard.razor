@@ -45,10 +45,10 @@
     {
         Nodes.OnSnapshot += HandleSnapshot;
 
-        // If no nodes connected, auto-connect to localhost
-        if (Nodes.Nodes.Count == 0)
+        // Auto-connect to the endpoint from login
+        if (Nodes.Nodes.Count == 0 && !string.IsNullOrEmpty(Auth.Endpoint))
         {
-            _ = Nodes.ConnectAsync("http://localhost:5050");
+            _ = Nodes.ConnectAsync(Auth.Endpoint);
         }
     }
 

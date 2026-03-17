@@ -6,13 +6,15 @@ namespace ShellSpecter.Seer.Services;
 public sealed class AuthService
 {
     public string? Token { get; private set; }
+    public string? Endpoint { get; private set; }
     public bool IsAuthenticated => !string.IsNullOrEmpty(Token);
 
     public event Action? OnAuthStateChanged;
 
-    public void SetToken(string token)
+    public void SetToken(string token, string endpoint)
     {
         Token = token;
+        Endpoint = endpoint;
         OnAuthStateChanged?.Invoke();
     }
 

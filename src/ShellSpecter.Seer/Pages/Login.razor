@@ -56,9 +56,16 @@ else
 
 @code {
     private LoginRequest _loginModel = new();
-    private string _specterUrl = "http://localhost:5050";
+    private string _specterUrl = string.Empty;
     private string? _error;
     private bool _isLoading;
+
+    protected override void OnInitialized()
+    {
+        // Default to the current page origin (works for remote access)
+        var uri = new Uri(Nav.BaseUri);
+        _specterUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+    }
 
     private async Task HandleLogin()
     {
@@ -75,7 +82,7 @@ else
                 var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
                 if (result != null)
                 {
-                    Auth.SetToken(result.Token);
+                    Auth.SetToken(result.Token, baseUrl);
                 }
             }
             else
