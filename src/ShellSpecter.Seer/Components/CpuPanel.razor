@@ -7,6 +7,10 @@
     @if (Snapshot?.Cores != null)
     {
         <span class="panel-badge">@Snapshot.Cores.Length cores</span>
+        @if (_packageTemp > 0)
+        {
+            <span class="panel-badge @GetTempColorClass(_packageTemp)">🌡️ @_packageTemp.ToString("F0")°C</span>
+        }
     }
 </div>
 <div class="panel-body">
@@ -70,6 +74,12 @@
     [Parameter] public LoadAverage? Load { get; set; }
 
     private readonly Dictionary<int, List<double>> _history = new();
+    private double _packageTemp;
+
+    protected override void OnParametersSet()
+    {
+        _packageTemp = Snapshot?.Cores?.FirstOrDefault()?.TemperatureC ?? 0;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -97,4 +107,11 @@
     }
 
     private static string FormatPct(double val) => val.ToString("F1");
+
+    private static string GetTempColorClass(double temp) => temp switch
+    {
+        > 85 => "text-red",
+        > 70 => "text-amber",
+        _ => "text-green"
+    };
 }
