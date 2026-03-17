@@ -75,7 +75,22 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Serve the Seer WASM app as static files (when deployed together)
-app.UseStaticFiles();
+var seerRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(seerRoot))
+{
+    var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(seerRoot);
+
+    // Serve Blazor framework files with correct content types
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = fileProvider,
+        ServeUnknownFileTypes = true
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
 
 // Auth endpoint
 app.MapPost("/api/auth/login", (LoginRequest request) =>
