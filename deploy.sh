@@ -119,7 +119,8 @@ systemctl stop "$SERVICE_NAME" 2>/dev/null || true
 mkdir -p "$INSTALL_DIR"
 cp -r "$WORK_DIR/publish/"* "$INSTALL_DIR/"
 
-# Copy Seer WASM files into the Specter's wwwroot
+# Clean old wwwroot and copy fresh Seer WASM files
+rm -rf "$INSTALL_DIR/wwwroot" 2>/dev/null || true
 cp -r "$WORK_DIR/seer-publish/wwwroot" "$INSTALL_DIR/wwwroot" 2>/dev/null || true
 
 # .NET 10 fingerprints _framework files (e.g. blazor.webassembly.{hash}.js)
@@ -136,15 +137,13 @@ if [ -d "$INSTALL_DIR/wwwroot/_framework" ]; then
     # Pattern: name.fingerprint.ext -> name.ext
     for f in *.*.*; do
         [ -f "$f" ] || continue
-        # Skip if no fingerprint pattern (must have at least 3 dot-separated parts)
         ext="${f##*.}"
         base="${f%.*}"          # Remove last extension: name.hash
         name="${base%.*}"       # Remove hash: name
         orig="${name}.${ext}"   # Original name: name.ext
 
-        # Only copy if the name differs and target doesn't exist
-        if [ "$orig" != "$f" ] && [ ! -e "$orig" ]; then
-            cp "$f" "$orig"
+        if [ "$orig" != "$f" ]; then
+            cp -f "$f" "$orig"
         fi
     done
     cd - >/dev/null
