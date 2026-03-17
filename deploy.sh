@@ -185,6 +185,9 @@ fi
 
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 chmod +x "$INSTALL_DIR/ShellSpecter.Specter"
+
+# Add to shadow group for PAM authentication
+usermod -aG shadow "$SERVICE_USER" 2>/dev/null || true
 ok "Permissions set"
 
 # ── Step 8: Install systemd service ──────────────────────────
