@@ -122,10 +122,30 @@ cp -r "$WORK_DIR/publish/"* "$INSTALL_DIR/"
 # Copy Seer WASM files into the Specter's wwwroot
 cp -r "$WORK_DIR/seer-publish/wwwroot" "$INSTALL_DIR/wwwroot" 2>/dev/null || true
 
-# Copy the static assets manifest (required for .NET 10 fingerprinted file mapping)
-if [ -f "$WORK_DIR/seer-publish/ShellSpecter.Seer.staticwebassets.endpoints.json" ]; then
-    cp "$WORK_DIR/seer-publish/ShellSpecter.Seer.staticwebassets.endpoints.json" \
-       "$INSTALL_DIR/ShellSpecter.Seer.staticwebassets.endpoints.json"
+# .NET 10 fingerprints _framework files (e.g. blazor.webassembly.{hash}.js)
+# Create symlinks from the original names that index.html expects
+if [ -d "$INSTALL_DIR/wwwroot/_framework" ]; then
+    log "Creating framework file symlinks..."
+    cd "$INSTALL_DIR/wwwroot/_framework"
+    for f in *.*.js *.*.wasm; do
+        [ -f "$f" ] || continue
+        # Extract original name: blazor.webassembly.66stpp682q.js -> blazor.webassembly.js
+        # Pattern: name.fingerprint.ext -> name.ext
+        orig=$(echo "$f" | sed -E 's/^(.+)\.[a-z0-9]+\.([^.]+)$/\1.\2/')
+        if [ "$orig" != "$f" ] && [ ! -e "$orig" ]; then
+            ln -sf "$f" "$orig"
+        fi
+    done
+    # Also handle dotnet.native files
+    for f in dotnet.native.*.wasm dotnet.native.*.js; do
+        [ -f "$f" ] || continue
+        orig=$(echo "$f" | sed -E 's/^(.+)\.[a-z0-9]+\.([^.]+)$/\1.\2/')
+        if [ "$orig" != "$f" ] && [ ! -e "$orig" ]; then
+            ln -sf "$f" "$orig"
+        fi
+    done
+    cd - >/dev/null
+    ok "Framework symlinks created"
 fi
 ok "Binaries installed to ${INSTALL_DIR}"
 
